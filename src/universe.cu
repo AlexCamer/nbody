@@ -22,31 +22,31 @@ universe_create(const float3 *pos_host, const float3 *vel_host, const float *mas
 	univ->mass_dev = NULL;
 	univ->n = n;
 
-	// allocate memory (on device) for position vector
+	// allocate memory on device for position vector
 	cuda_status = cudaMalloc((void **)&univ->pos_dev, n * sizeof(float3));
 	if (cuda_status != cudaSuccess) {
-		fprintf(stderr, "Failed to allocate memory (on device) for position vector.");
+		fprintf(stderr, "Failed to allocate memory on device for position vector.");
 		goto error;
 	}
 
-	// allocate memory (on device) for velocity vector
+	// allocate memory on device for velocity vector
 	cuda_status = cudaMalloc((void **)&univ->vel_dev, n * sizeof(float3));
 	if (cuda_status != cudaSuccess) {
-		fprintf(stderr, "Failed to allocate memory (on device) for velocity vector.");
+		fprintf(stderr, "Failed to allocate memory on device for velocity vector.");
 		goto error;
 	}
 
-	// allocate memory (on device) for acceleration vector
+	// allocate memory on device for acceleration vector
 	cuda_status = cudaMalloc((void **)&univ->acc_dev, n * sizeof(float3));
 	if (cuda_status != cudaSuccess) {
-		fprintf(stderr, "Failed to allocate memory (on device) for acceleration vector.");
+		fprintf(stderr, "Failed to allocate memory on device for acceleration vector.");
 		goto error;
 	}
 
-	// allocate memory (on device) for mass vector
+	// allocate memory on device for mass vector
 	cuda_status = cudaMalloc((void **)&univ->mass_dev, n * sizeof(float));
 	if (cuda_status != cudaSuccess) {
-		fprintf(stderr, "Failed to allocate memory (on device) for mass vector.");
+		fprintf(stderr, "Failed to allocate memory on device for mass vector.");
 		goto error;
 	}
 
@@ -95,12 +95,10 @@ universe_step(struct universe *univ)
 	cudaError_t cuda_status;
 
 	// update acceleration vector based on position and mass vectors
-	unsigned int num_blocks = (univ->n + TILE_SIZE - 1) / TILE_SIZE; // equivalent to ROUND_UP(univ->n / TILE_SIZE)
-	unsigned int shared_mem_size = univ->n * sizeof(float4);
-	update_acc<<<num_blocks, TILE_SIZE, shared_mem_size>>>(univ->pos_dev, univ->acc_dev, univ->mass_dev, univ->n);
+	update_acc<<<univ->n, 1>>>(univ->pos_dev, univ->acc_dev, univ->mass_dev, univ->n);
 	cuda_status = cudaGetLastError();
 	if (cuda_status != cudaSuccess) {
-		fprintf(stderr, "Failed to update acceleration vector (on device).");
+		fprintf(stderr, "Failed to update acceleration vector.");
 		return 1;
 	}
 
@@ -115,7 +113,7 @@ universe_step(struct universe *univ)
 	update_pos_and_vel<<<univ->n, 1>>>(univ->pos_dev, univ->vel_dev, univ->acc_dev);
 	cuda_status = cudaGetLastError();
 	if (cuda_status != cudaSuccess) {
-		fprintf(stderr, "Failed to update position and velocity vectors (on device).");
+		fprintf(stderr, "Failed to update position and velocity vectors.");
 		return 1;
 	}
 

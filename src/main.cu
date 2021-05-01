@@ -3,7 +3,7 @@
 #include <time.h>
 #include "universe.cuh"
 
-#define NUM_BODIES 100
+#define NUM_BODIES 250
 #define LIFE_SPAN 10000
 #define VERBOSE false
 
@@ -40,7 +40,7 @@ main()
 {
 	cudaError_t cuda_status;
 
-	printf("Starting memory allocation.\n");
+	printf("Started memory allocation.\n");
 		float3* pos_host = NULL;
 		float3 *vel_host = NULL;
 		float *mass_host = NULL;
@@ -49,65 +49,65 @@ main()
 		cuda_status = cudaMallocHost((void **)&pos_host, NUM_BODIES * sizeof(float3));
 		if (cuda_status != cudaSuccess) {
 			fprintf(stderr, "Failed to allocate memory (on host) for position vector.");
-			goto error;
+			goto cleanup;
 		}
 
 		// allocate memory (on host) for velocity vector
 		cuda_status = cudaMallocHost((void **)&vel_host, NUM_BODIES * sizeof(float3));
 		if (cuda_status != cudaSuccess) {
 			fprintf(stderr, "Failed to allocate memory (on host) for velocity vector.");
-			goto error;
+			goto cleanup;
 		}
 
 		// allocate memory (on host) for mass vector
 		cuda_status = cudaMallocHost((void **)&mass_host, NUM_BODIES * sizeof(float));
 		if (cuda_status != cudaSuccess) {
 			fprintf(stderr, "Failed to allocate memory (on host) for mass vector.");
-			goto error;
+			goto cleanup;
 		}
 
 		populate_state(pos_host, vel_host, mass_host);
+
+		// create universe struct
 		struct universe* univ = universe_create(pos_host, vel_host, mass_host, NUM_BODIES);
-
-		// keep pos_host for use with universe_state
-		cudaFreeHost(vel_host);
-		cudaFreeHost(mass_host);
-
-		// check whether universe struct was created succesfully
 		if (univ == NULL) {
-			cudaFreeHost(pos_host);
 			fprintf(stderr, "Failed to create universe struct.");
-			return 1;
+			goto cleanup;
 		}
 	printf("Finished memory allocation.\n");
 
-	printf("Starting computation.\n");
+	printf("Started computation.\n");
 		clock_t start = clock();
 		int err;
 
+		// retrieve initial universe state
 		err = universe_state(univ, pos_host);
 		if (err) {
 			fprintf(stderr, "Failed to retrieve universe state.");
-			goto error;
+			goto cleanup;
 		}
 
+		// print initial state
 		if (VERBOSE) {
 			print_state(pos_host, 0);
 		}
 
 		for (unsigned int i = 1; i <= LIFE_SPAN; i++) {
+			// update universe state
 			err = universe_step(univ);
 			if (err) {
 				fprintf(stderr, "Failed to update universe state.");
-				goto error;
+				goto cleanup;
 			}
 
+			// retrieve current universe state
 			err = universe_state(univ, pos_host);
 			if (err) {
 				fprintf(stderr, "Failed to retrieve universe state.");
-				goto error;
+				goto cleanup;
 			}
 
+			// print current state
 			if (VERBOSE) {
 				print_state(pos_host, i);
 			}
@@ -117,16 +117,14 @@ main()
 		float seconds = (float)(end - start) / CLOCKS_PER_SEC;
 	printf("Finished computation in %.2f seconds.\n", seconds);
 
-	printf("Starting cleanup.\n");
+cleanup:
+	printf("Started cleanup.\n");
 		cudaFreeHost(pos_host);
-		universe_destroy(univ);
+		cudaFreeHost(vel_host);
+		cudaFreeHost(mass_host);
+		if (univ != NULL) {
+			universe_destroy(univ);
+		}
 	printf("Finished cleanup.\n");
 	return 0;
-
-error:
-	printf("Starting cleanup.\n");
-		cudaFreeHost(pos_host);
-		universe_destroy(univ);
-	printf("Finished cleanup.\n");
-	return 1;
 }
