@@ -1,4 +1,4 @@
-﻿#ifndef _UNIVERSE_CUH_
+#ifndef _UNIVERSE_CUH_
 #define _UNIVERSE_CUH_
 
 #include <cuda_runtime.h>

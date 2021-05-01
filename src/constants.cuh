@@ -1,4 +1,4 @@
-﻿#ifndef _CONSTANTS_CUH_
+#ifndef _CONSTANTS_CUH_
 #define _CONSTANTS_CUH_
 
 // gravitational constant

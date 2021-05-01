@@ -10,18 +10,8 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="constants.cuh" />
-    <ClInclude Include="physics.cuh" />
-    <ClInclude Include="universe.cuh" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="main.cu" />
-    <CudaCompile Include="physics.cu" />
-    <CudaCompile Include="universe.cu" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{9D48765F-5FDF-4BF9-B8FD-07092A04C3B5}</ProjectGuid>
+    <ProjectGuid>{82F9E0F5-4477-415B-AC60-F9284C3FF2E5}</ProjectGuid>
     <RootNamespace>nbody</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -65,6 +55,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <Include>$(SolutionDir)include;$(SolutionDir)src;%(Include)</Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -86,6 +77,16 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\main.cu" />
+    <CudaCompile Include="src\physics.cu" />
+    <CudaCompile Include="src\universe.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\universe.cuh" />
+    <ClInclude Include="src\constants.cuh" />
+    <ClInclude Include="src\physics.cuh" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.3.targets" />
