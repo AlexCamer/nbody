@@ -2,7 +2,10 @@
 #include "constants.cuh"
 #include "physics.cuh"
 
-__device__ float3 body_acc(float3 my_body_pos, float3 my_body_acc, float4 other_body_pos_and_mass) {
+__device__
+float3
+body_acc(float3 my_body_pos, float3 my_body_acc, float4 other_body_pos_and_mass)
+{
 	//
 	float3 dist;
 	dist.x = other_body_pos_and_mass.x - my_body_pos.x;
@@ -22,7 +25,10 @@ __device__ float3 body_acc(float3 my_body_pos, float3 my_body_acc, float4 other_
 	return my_body_acc;
 }
 
-__device__ float3 tile_acc(float3 my_body_pos, float3 my_body_acc) {
+__device__
+float3
+tile_acc(float3 my_body_pos, float3 my_body_acc)
+{
 	//
 	extern __shared__ float4 shared_pos_and_mass[];
 
@@ -34,7 +40,10 @@ __device__ float3 tile_acc(float3 my_body_pos, float3 my_body_acc) {
 	return my_body_acc;
 }
 
-__global__ void update_acc(const float3* pos_dev, float3* acc_dev, const float* mass_dev, unsigned int n) {
+__global__
+void
+update_acc(const float3* pos_dev, float3* acc_dev, const float* mass_dev, unsigned int n)
+{
 	//
 	extern __shared__ float4 shared_pos_and_mass[];
 
@@ -67,7 +76,10 @@ __global__ void update_acc(const float3* pos_dev, float3* acc_dev, const float* 
 	acc_dev[my_body_index] = my_body_acc;
 }
 
-__global__ void update_pos_and_vel(float3* pos_dev, float3* vel_dev, const float3* acc_dev) {
+__global__
+void
+update_pos_and_vel(float3* pos_dev, float3* vel_dev, const float3* acc_dev)
+{
 	//
 	unsigned int my_body_index = blockIdx.x;
 

@@ -3,7 +3,9 @@
 #include "physics.cuh"
 #include "universe.cuh"
 
-struct universe* universe_create(float3* pos_host, float3* vel_host, float* mass_host, unsigned int n) {
+struct universe* 
+universe_create(float3* pos_host, float3* vel_host, float* mass_host, unsigned int n) 
+{
 	cudaError_t cuda_status;
 
 	// allocate host memory for universe struct
@@ -77,7 +79,9 @@ error:
 	return NULL;
 }
 
-void universe_destroy(struct universe* univ) {
+void
+universe_destroy(struct universe* univ)
+{
 	cudaFree(univ->pos_dev);
 	cudaFree(univ->vel_dev);
 	cudaFree(univ->acc_dev);
@@ -85,7 +89,9 @@ void universe_destroy(struct universe* univ) {
 	cudaFreeHost(univ);
 }
 
-int universe_step(struct universe* univ) {
+int
+universe_step(struct universe* univ)
+{
 	cudaError_t cuda_status;
 
 	// update acceleration vector based on position and mass vectors
@@ -123,7 +129,9 @@ int universe_step(struct universe* univ) {
 	return 0;
 }
 
-int universe_state(struct universe* univ, float3* pos_host) {
+int
+universe_state(struct universe* univ, float3* pos_host)
+{
 	// copy position vector from host to device
 	cudaError_t cuda_status = cudaMemcpy(pos_host, univ->pos_dev, univ->n * sizeof(float3), cudaMemcpyDeviceToHost);
 	if (cuda_status != cudaSuccess) {
