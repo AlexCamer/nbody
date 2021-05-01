@@ -1,9 +1,8 @@
-﻿#include <device_launch_parameters.h>
+#include <device_launch_parameters.h>
 #include "constants.cuh"
 #include "physics.cuh"
 
-__device__
-float3
+__device__ float3
 body_acc(float3 my_body_pos, float3 my_body_acc, float4 other_body_pos_and_mass)
 {
 	//
@@ -25,8 +24,7 @@ body_acc(float3 my_body_pos, float3 my_body_acc, float4 other_body_pos_and_mass)
 	return my_body_acc;
 }
 
-__device__
-float3
+__device__ float3
 tile_acc(float3 my_body_pos, float3 my_body_acc)
 {
 	//
@@ -40,9 +38,8 @@ tile_acc(float3 my_body_pos, float3 my_body_acc)
 	return my_body_acc;
 }
 
-__global__
-void
-update_acc(const float3* pos_dev, float3* acc_dev, const float* mass_dev, unsigned int n)
+__global__ void
+update_acc(const float3 *pos_dev, float3 *acc_dev, const float *mass_dev, unsigned int n)
 {
 	//
 	extern __shared__ float4 shared_pos_and_mass[];
@@ -76,9 +73,8 @@ update_acc(const float3* pos_dev, float3* acc_dev, const float* mass_dev, unsign
 	acc_dev[my_body_index] = my_body_acc;
 }
 
-__global__
-void
-update_pos_and_vel(float3* pos_dev, float3* vel_dev, const float3* acc_dev)
+__global__ void
+update_pos_and_vel(float3 *pos_dev, float3 *vel_dev, const float3 *acc_dev)
 {
 	//
 	unsigned int my_body_index = blockIdx.x;

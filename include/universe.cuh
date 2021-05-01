@@ -5,10 +5,10 @@
 
 struct universe
 {
-	float3* pos_dev; // position vector (on device)
-	float3* vel_dev; // velocity vector (on device)
-	float3* acc_dev; // acceleration vector (on device)
-	float* mass_dev; // mass vector (on device)
+	float3 *pos_dev; // position vector (on device)
+	float3 *vel_dev; // velocity vector (on device)
+	float3 *acc_dev; // acceleration vector (on device)
+	float *mass_dev; // mass vector (on device)
 	unsigned int n;  // vector size
 };
 
@@ -21,16 +21,16 @@ struct universe
  * @param n          Vector size.
  * @return           Universe struct.
  */
-struct universe*
-universe_create(float3* pos_host, float3* vel_host, float* mass_host, unsigned int n);
+struct universe *
+universe_create(const float3 *pos_host, const float3 *vel_host, const float *mass_host, unsigned int n);
 
 /**
  * Destroys a universe struct.
  *
  * @param univ  Universe struct to destroy.
  */
-void
-universe_destroy(struct universe* univ);
+__host__ void
+universe_destroy(struct universe *univ);
 
 /**
  * Performs one universal time step.
@@ -38,8 +38,8 @@ universe_destroy(struct universe* univ);
  * @param univ  Universe struct to update.
  * @return      Error status.
  */
-int
-universe_step(struct universe* univ);
+__host__ int
+universe_step(struct universe *univ);
 
 /**
  * Retrieves universe state in terms of body positions.
@@ -48,7 +48,7 @@ universe_step(struct universe* univ);
  * @param pos_host  Position vector (on host) to copy to.
  * @return          Error status.
  */
-int
-universe_state(struct universe* univ, float3* pos_host);
+__host__ int
+universe_state(const struct universe *univ, float3 *pos_host);
 
 #endif
