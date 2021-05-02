@@ -38,7 +38,7 @@ print_state(float3 *pos_host, int state_num)
 __host__ int
 main()
 {
-	cudaError_t cuda_status;
+	cudaError_t err;
 
 	printf("Started memory allocation.\n");
 		float3* pos_host = NULL;
@@ -46,22 +46,22 @@ main()
 		float *mass_host = NULL;
 
 		// allocate memory (on host) for position vector
-		cuda_status = cudaMallocHost((void **)&pos_host, NUM_BODIES * sizeof(float3));
-		if (cuda_status != cudaSuccess) {
+		err = cudaMallocHost((void **)&pos_host, NUM_BODIES * sizeof(float3));
+		if (err) {
 			fprintf(stderr, "Failed to allocate memory (on host) for position vector.");
 			goto cleanup;
 		}
 
 		// allocate memory (on host) for velocity vector
-		cuda_status = cudaMallocHost((void **)&vel_host, NUM_BODIES * sizeof(float3));
-		if (cuda_status != cudaSuccess) {
+		err = cudaMallocHost((void **)&vel_host, NUM_BODIES * sizeof(float3));
+		if (err) {
 			fprintf(stderr, "Failed to allocate memory (on host) for velocity vector.");
 			goto cleanup;
 		}
 
 		// allocate memory (on host) for mass vector
-		cuda_status = cudaMallocHost((void **)&mass_host, NUM_BODIES * sizeof(float));
-		if (cuda_status != cudaSuccess) {
+		err = cudaMallocHost((void **)&mass_host, NUM_BODIES * sizeof(float));
+		if (err) {
 			fprintf(stderr, "Failed to allocate memory (on host) for mass vector.");
 			goto cleanup;
 		}
@@ -78,7 +78,6 @@ main()
 
 	printf("Started computation.\n");
 		clock_t start = clock();
-		int err;
 
 		// retrieve initial universe state
 		err = universe_state(univ, pos_host);
@@ -99,7 +98,7 @@ main()
 				fprintf(stderr, "Failed to update universe state.");
 				goto cleanup;
 			}
-
+			
 			// retrieve current universe state
 			err = universe_state(univ, pos_host);
 			if (err) {

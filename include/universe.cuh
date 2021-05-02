@@ -38,7 +38,7 @@ universe_destroy(struct universe *univ);
  * @param univ  Universe struct to update.
  * @return      Error status.
  */
-__host__ int
+__host__ cudaError_t
 universe_step(struct universe *univ);
 
 /**
@@ -48,7 +48,7 @@ universe_step(struct universe *univ);
  * @param pos_host  Position vector (on host) to copy to.
  * @return          Error status.
  */
-__host__ int
+__host__ cudaError_t
 universe_state(const struct universe *univ, float3 *pos_host);
 
 #endif
