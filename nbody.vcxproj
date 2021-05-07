@@ -90,7 +90,6 @@
     <CudaCompile Include="src\universe.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\body.cuh" />
     <ClInclude Include="include\universe.h" />
     <ClInclude Include="src\constants.cuh" />
     <ClInclude Include="src\physics.cuh" />

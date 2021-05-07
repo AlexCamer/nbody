@@ -1,21 +1,20 @@
-#include <device_launch_parameters.h>
-
 #include "constants.cuh"
 #include "physics.cuh"
 
 namespace nbody
 {
-	__global__ void
-	updateAcc(const float4* posArray_dev, float4* accArray_dev, const float* massArray_dev, size_t size)
+	void
+	updateAcc(const float4* posArray_host, float4* accArray_host, const float* massArray_host,
+		size_t size, unsigned int bodyIdx)
 	{
 		// retrieve data for myBody (body assigned to block)
-		float4 myBodyPos = posArray_dev[blockIdx.x];
+		float4 myBodyPos = posArray_host[bodyIdx];
 		float4 myBodyAcc = { 0.0f, 0.0f, 0.0f };
 
 		// calculate acceleration of myBody due to all other bodies
 		for (unsigned int i = 0; i < size; i++) {
-			float4 otherBodyPos = posArray_dev[i];
-			float otherBodyMass = massArray_dev[i];
+			float4 otherBodyPos = posArray_host[i];
+			float otherBodyMass = massArray_host[i];
 
 			// calculate distance vector between myBody and otherBody
 			float4 dist;
@@ -35,16 +34,17 @@ namespace nbody
 		}
 
 		// store myBody acceleration
-		accArray_dev[blockIdx.x] = myBodyAcc;
+		accArray_host[bodyIdx] = myBodyAcc;
 	}
 
-	__global__ void
-	updatePosAndVel(float4* posArray_dev, float4* velArray_dev, const float4* accArray_dev, float dt)
+	void
+	updatePosAndVel(float4* posArray_host, float4* velArray_host, const float4* accArray_host,
+		float dt, unsigned int bodyIdx)
 	{
 		// retrieve data for myBody (body assigned to block)
-		float4 myBodyPos = posArray_dev[blockIdx.x];
-		float4 myBodyVel = velArray_dev[blockIdx.x];
-		float4 myBodyAcc = accArray_dev[blockIdx.x];
+		float4 myBodyPos = posArray_host[bodyIdx];
+		float4 myBodyVel = velArray_host[bodyIdx];
+		float4 myBodyAcc = accArray_host[bodyIdx];
 
 		// update myBody position
 		float dtHalfSqr = dt * dt / 2;
@@ -58,7 +58,7 @@ namespace nbody
 		myBodyVel.z += myBodyAcc.z * dt;
 
 		// store myBody position and velocity
-		posArray_dev[blockIdx.x] = myBodyPos;
-		velArray_dev[blockIdx.x] = myBodyVel;
+		posArray_host[bodyIdx] = myBodyPos;
+		velArray_host[bodyIdx] = myBodyVel;
 	}
 }

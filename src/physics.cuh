@@ -11,8 +11,9 @@ namespace nbody
 	 * @param massArray_dev  Body masses array on device.
 	 * @param size           Size of arrays.
 	 */
-	__global__ void
-	updateAcc(const float4* posArray_dev, float4* accArray_dev, const float* massArray_dev, size_t size);
+	void
+	updateAcc(const float4* posArray_host, float4* accArray_host, const float* massArray_host,
+		size_t size, unsigned int bodyIdx);
 
 	/**
 	 * Updates body positions and velocities according to body accelerations.
@@ -21,6 +22,7 @@ namespace nbody
 	 * @param accArray_dev  Body accelerations array on device.
 	 * @param dt            Time increment.
 	 */
-	__global__ void
-	updatePosAndVel(float4* posArray_dev, float4* velArray_dev, const float4* accArray_dev, float dt);
+	void
+	updatePosAndVel(float4* posArray_host, float4* velArray_host, const float4* accArray_host,
+		float dt, unsigned int bodyIdx);
 }
