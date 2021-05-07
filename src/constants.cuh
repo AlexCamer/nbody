@@ -1,13 +1,10 @@
-#ifndef _CONSTANTS_CUH_
-#define _CONSTANTS_CUH_
+#pragma once
 
-// gravitational constant
-#define G 6.674e-11f
+namespace nbody
+{
+	// gravitational constant
+	constexpr float G = 6.674e-11f;
 
-// universal time step
-#define DT 1e-1f
-
-// small number used to prevent division by zero
-# define NAN_GUARD 1e-10f
-
-#endif
+	// small number to prevent division by zero
+	constexpr float NAN_GUARD = 1e-10f;
+}

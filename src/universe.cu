@@ -1,141 +1,159 @@
-#include <stdio.h>
-#include "constants.cuh"
+#include <cuda_runtime.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+
 #include "physics.cuh"
-#include "universe.cuh"
+#include "universe.h"
 
-__host__ struct universe *
-universe_create(const float3 *pos_host, const float3 *vel_host, const float *mass_host, unsigned int n)
+namespace nbody
 {
-	cudaError_t err;
+	struct Universe::Data
+	{
+		// device memory
+		thrust::device_vector<float4> posVec_dev;  // body positions vector on device
+		thrust::device_vector<float4> velVec_dev;  // body velocities vector on device
+		thrust::device_vector<float4> accVec_dev;  // body accelerations vector on device
+		thrust::device_vector<float> massVec_dev;  // body masses vector on device
 
-	// allocate memory on host for universe struct
-	struct universe *univ;
-	err = cudaMallocHost((void **)&univ, sizeof(struct universe));
-	if (err) {
-		fprintf(stderr, "Failed to allocate memory on host for universe struct.");
-		return NULL;
+		// host memory
+		thrust::host_vector<float4> posVec_host;  // body positions vector on host
+		thrust::host_vector<float4> velVec_host;  // body velocities vector on host
+		thrust::host_vector<float> massVec_host;  // body masses vector on host
+
+		// flags
+		bool isPosVecOnHostValid;   // is body positions vector on host up to date?
+		bool isVelVecOnHostValid;   // is body velocities vector on host up to date?
+		bool isMassVecOnHostValid;  // is body masses vector on host up to date?
+
+		/**
+		 * Sets flags to false.
+		 */
+		void invalidate();
+	};
+
+	void
+	Universe::Data::invalidate()
+	{
+		isPosVecOnHostValid = false;
+		isVelVecOnHostValid = false;
+		isMassVecOnHostValid = false;
 	}
 
-	univ->pos_dev = NULL;
-	univ->vel_dev = NULL;
-	univ->acc_dev = NULL;
-	univ->mass_dev = NULL;
-	univ->n = n;
-
-	// allocate memory on device for position vector
-	err = cudaMalloc((void **)&univ->pos_dev, n * sizeof(float3));
-	if (err) {
-		fprintf(stderr, "Failed to allocate memory on device for position vector.");
-		goto cleanup;
+	Universe::Universe() : data{ new Data{} }
+	{
 	}
 
-	// allocate memory on device for velocity vector
-	err = cudaMalloc((void **)&univ->vel_dev, n * sizeof(float3));
-	if (err) {
-		fprintf(stderr, "Failed to allocate memory on device for velocity vector.");
-		goto cleanup;
+	Universe::~Universe()
+	{
+		delete data;
 	}
 
-	// allocate memory on device for acceleration vector
-	err = cudaMalloc((void **)&univ->acc_dev, n * sizeof(float3));
-	if (err) {
-		fprintf(stderr, "Failed to allocate memory on device for acceleration vector.");
-		goto cleanup;
+	void
+	Universe::add(const float* pos, const float* vel, float mass)
+	{
+		data->posVec_dev.push_back({ pos[0], pos[1], pos[2] });
+		data->velVec_dev.push_back({ vel[0], vel[1], vel[2] });
+		data->accVec_dev.push_back({});
+		data->massVec_dev.push_back(mass);
+
+		// vectors on device were changed
+		data->invalidate();
 	}
 
-	// allocate memory on device for mass vector
-	err = cudaMalloc((void **)&univ->mass_dev, n * sizeof(float));
-	if (err) {
-		fprintf(stderr, "Failed to allocate memory on device for mass vector.");
-		goto cleanup;
+	void
+	Universe::remove(unsigned int bodyIdx)
+	{
+		data->posVec_dev.erase(data->posVec_dev.begin() + bodyIdx);
+		data->velVec_dev.erase(data->velVec_dev.begin() + bodyIdx);
+		data->accVec_dev.erase(data->accVec_dev.begin() + bodyIdx);
+		data->massVec_dev.erase(data->massVec_dev.begin() + bodyIdx);
+
+		// vectors on device were changed
+		data->invalidate();
 	}
 
-	// copy position vector from host to device
-	err = cudaMemcpy(univ->pos_dev, pos_host, n * sizeof(float3), cudaMemcpyHostToDevice);
-	if (err) {
-		fprintf(stderr, "Failed to copy position vector from host to device.");
-		goto cleanup;
+	void
+	Universe::reset()
+	{
+		data->posVec_dev.clear();
+		data->velVec_dev.clear();
+		data->accVec_dev.clear();
+		data->massVec_dev.clear();
+
+		// vectors on device were changed
+		data->invalidate();
 	}
 
-	// copy velocity vector from host to device
-	err = cudaMemcpy(univ->vel_dev, vel_host, n * sizeof(float3), cudaMemcpyHostToDevice);
-	if (err) {
-		fprintf(stderr, "Failed to copy velocity vector from host to device.");
-		goto cleanup;
+	size_t
+	Universe::size()
+	{
+		return data->posVec_dev.size();
 	}
 
-	// copy mass vector from host to device
-	err = cudaMemcpy(univ->mass_dev, mass_host, n * sizeof(float), cudaMemcpyHostToDevice);
-	if (err) {
-		fprintf(stderr, "Failed to copy mass vector from host to device.");
-		goto cleanup;
+	void
+	Universe::step(float dt)
+	{
+		float4* posArray_dev = thrust::raw_pointer_cast(data->posVec_dev.data());
+		float4* velArray_dev = thrust::raw_pointer_cast(data->velVec_dev.data());
+		float4* accArray_dev = thrust::raw_pointer_cast(data->accVec_dev.data());
+		float* massArray_dev = thrust::raw_pointer_cast(data->massVec_dev.data());
+		unsigned int numBlocks = (unsigned int)size();
+
+		// update accelerations based on positions and masses
+		updateAcc<<<numBlocks, 1>>>(posArray_dev, accArray_dev, massArray_dev, size());
+
+		// wait for device to finish computation
+		cudaDeviceSynchronize();
+
+		// update positions and velocities based on new accelerations
+		updatePosAndVel<<<numBlocks, 1>>>(posArray_dev, velArray_dev, accArray_dev, dt);
+
+		// wait for device to finish computation
+		cudaDeviceSynchronize();
+
+		// vectors on device were changed
+		data->invalidate();
 	}
 
-	return univ;
+	const float*
+	Universe::position(unsigned int bodyIdx)
+	{
+		// if body positions vector on host is invalid:
+		if (!data->isPosVecOnHostValid) {
+			// copy from body positions vector on device
+			data->posVec_host = data->posVec_dev;  // abstracted device to host memcopy
+			data->isPosVecOnHostValid = true;
+		}
 
-cleanup:
-	// destroy universe struct and vectors
-	universe_destroy(univ);
-	return NULL;
-}
-
-__host__ void
-universe_destroy(struct universe *univ)
-{
-	cudaFree(univ->pos_dev);
-	cudaFree(univ->vel_dev);
-	cudaFree(univ->acc_dev);
-	cudaFree(univ->mass_dev);
-	cudaFreeHost(univ);
-}
-
-__host__ cudaError_t
-universe_step(struct universe *univ)
-{
-	cudaError_t err;
-
-	// update acceleration vector based on position and mass vectors
-	update_acc<<<univ->n, 1>>>(univ->pos_dev, univ->acc_dev, univ->mass_dev, univ->n);
-	err = cudaGetLastError();
-	if (err) {
-		fprintf(stderr, "Failed to update acceleration vector.");
-		return err;
+		// return body position array (form: [x, y, z])
+		return (float*)&data->posVec_host[bodyIdx];
 	}
 
-	// wait for device to finish computation
-	err = cudaDeviceSynchronize();
-	if (err) {
-		fprintf(stderr, "Failed to synchronize host and device.");
-		return err;
+	const float*
+	Universe::velocity(unsigned int bodyIdx)
+	{
+		// if body velocities vector on host is invalid:
+		if (!data->isVelVecOnHostValid) {
+			// copy from body velocities vector on device
+			data->velVec_host = data->velVec_dev;  // abstracted device to host memcopy
+			data->isVelVecOnHostValid = true;
+		}
+
+		// return body velocity array (form: [x, y, z])
+		return (float*)&data->velVec_host[bodyIdx];
 	}
 
-	// update position and velocity vectors based on the new acceleration vector
-	update_pos_and_vel<<<univ->n, 1>>>(univ->pos_dev, univ->vel_dev, univ->acc_dev);
-	err = cudaGetLastError();
-	if (err) {
-		fprintf(stderr, "Failed to update position and velocity vectors.");
-		return err;
+	float
+	Universe::mass(unsigned int bodyIdx)
+	{
+		// if body masses vector on host is invalid:
+		if (!data->isMassVecOnHostValid) {
+			// copy from body masses vector on device
+			data->massVec_host = data->massVec_dev;  // abstracted device to host memcopy
+			data->isMassVecOnHostValid = true;
+		}
+
+		// return body mass
+		return data->massVec_host[bodyIdx];
 	}
-
-	// wait for device to finish computation
-	err = cudaDeviceSynchronize();
-	if (err) {
-		fprintf(stderr, "Failed to synchronize host and device.");
-		return err;
-	}
-
-	return cudaSuccess;
-}
-
-__host__ cudaError_t
-universe_state(const struct universe *univ, float3 *pos_host)
-{
-	// copy position vector from host to device
-	cudaError_t err = cudaMemcpy(pos_host, univ->pos_dev, univ->n * sizeof(float3), cudaMemcpyDeviceToHost);
-	if (err) {
-		fprintf(stderr, "Failed to copy position vector from device to host.");
-		return err;
-	}
-
-	return cudaSuccess;
 }

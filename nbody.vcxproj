@@ -13,6 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{82F9E0F5-4477-415B-AC60-F9284C3FF2E5}</ProjectGuid>
     <RootNamespace>nbody</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -22,7 +23,7 @@
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
@@ -41,7 +42,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)test;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(SolutionDir)include;$(SolutionDir)src;$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)bin</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -56,7 +61,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <Include>$(SolutionDir)include;$(SolutionDir)src;%(Include)</Include>
+      <Include>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)test;%(Include)</Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -76,15 +81,17 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <Include>$(SolutionDir)include;$(SolutionDir)src;%(Include)</Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="src\main.cu" />
     <CudaCompile Include="src\physics.cu" />
+    <CudaCompile Include="test\benchmark.cpp" />
     <CudaCompile Include="src\universe.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\universe.cuh" />
+    <ClInclude Include="src\body.cuh" />
+    <ClInclude Include="include\universe.h" />
     <ClInclude Include="src\constants.cuh" />
     <ClInclude Include="src\physics.cuh" />
   </ItemGroup>

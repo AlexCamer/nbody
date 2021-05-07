@@ -1,62 +1,64 @@
 #include <device_launch_parameters.h>
+
 #include "constants.cuh"
 #include "physics.cuh"
 
-__global__ void
-update_acc(const float3* pos_dev, float3* acc_dev, const float* mass_dev, unsigned int n)
+namespace nbody
 {
-	// retrieve index of body assigned to block (my_body)
-	int my_body_index = blockIdx.x;
+	__global__ void
+	updateAcc(const float4* posArray_dev, float4* accArray_dev, const float* massArray_dev, size_t size)
+	{
+		// retrieve data for myBody (body assigned to block)
+		float4 myBodyPos = posArray_dev[blockIdx.x];
+		float4 myBodyAcc = { 0.0f, 0.0f, 0.0f };
 
-	// retrieve my_body position
-	float3 my_body_pos = pos_dev[my_body_index];;
-	float3 my_body_acc = { 0.0f, 0.0f, 0.0f };
+		// calculate acceleration of myBody due to all other bodies
+		for (unsigned int i = 0; i < size; i++) {
+			float4 otherBodyPos = posArray_dev[i];
+			float otherBodyMass = massArray_dev[i];
 
-	// calculate acceleration of my_body due to all other bodies
-	for (unsigned int i = 0; i < n; i++) {
-		float3 other_body_pos = pos_dev[i];
+			// calculate distance vector between myBody and otherBody
+			float4 dist;
+			dist.x = otherBodyPos.x - myBodyPos.x;
+			dist.y = otherBodyPos.y - myBodyPos.y;
+			dist.z = otherBodyPos.z - myBodyPos.z;
 
-		// calculate distance vector between my_body and other_body
-		float3 dist;
-		dist.x = other_body_pos.x - my_body_pos.x;
-		dist.y = other_body_pos.y - my_body_pos.y;
-		dist.z = other_body_pos.z - my_body_pos.z;
+			// calculate ratio between acceleration and distance
+			float temp = dist.x * dist.x + dist.y * dist.y + dist.z * dist.z + NAN_GUARD;
+			temp = temp * temp * temp;
+			float ratio = otherBodyMass / sqrtf(temp);
 
-		// calculate ratio between acceleration and distance
-		float temp = dist.x * dist.x + dist.y * dist.y + dist.z * dist.z + NAN_GUARD;
-		temp = temp * temp * temp;
-		float ratio = mass_dev[i] / sqrtf(temp);
+			// update myBody acceleration
+			myBodyAcc.x += dist.x * ratio;
+			myBodyAcc.y += dist.y * ratio;
+			myBodyAcc.z += dist.z * ratio;
+		}
 
-		// update my_body acceleration
-		my_body_acc.x += dist.x * ratio;
-		my_body_acc.y += dist.y * ratio;
-		my_body_acc.z += dist.z * ratio;
+		// store myBody acceleration
+		accArray_dev[blockIdx.x] = myBodyAcc;
 	}
 
-	// store my_body acceleration
-	acc_dev[my_body_index] = my_body_acc;
-}
+	__global__ void
+	updatePosAndVel(float4* posArray_dev, float4* velArray_dev, const float4* accArray_dev, float dt)
+	{
+		// retrieve data for myBody (body assigned to block)
+		float4 myBodyPos = posArray_dev[blockIdx.x];
+		float4 myBodyVel = velArray_dev[blockIdx.x];
+		float4 myBodyAcc = accArray_dev[blockIdx.x];
 
-__global__ void
-update_pos_and_vel(float3 *pos_dev, float3 *vel_dev, const float3 *acc_dev)
-{
-	// retrieve index of body assigned to block (my_body)
-	unsigned int my_body_index = blockIdx.x;
+		// update myBody position
+		float dtHalfSqr = dt * dt / 2;
+		myBodyPos.x += myBodyVel.x * dt + myBodyAcc.x * dtHalfSqr;
+		myBodyPos.y += myBodyVel.y * dt + myBodyAcc.y * dtHalfSqr;
+		myBodyPos.z += myBodyVel.z * dt + myBodyAcc.z * dtHalfSqr;
 
-	// retrieve my_body position, velocity, and acceleration
-	float3 my_body_pos = pos_dev[my_body_index];
-	float3 my_body_vel = vel_dev[my_body_index];
-	float3 my_body_acc = acc_dev[my_body_index];
+		// update myBody velocity
+		myBodyVel.x += myBodyAcc.x * dt;
+		myBodyVel.y += myBodyAcc.y * dt;
+		myBodyVel.z += myBodyAcc.z * dt;
 
-	// update and store my_body position
-	my_body_pos.x += my_body_vel.x * DT + my_body_acc.x * DT * DT / 2;
-	my_body_pos.y += my_body_vel.y * DT + my_body_acc.y * DT * DT / 2;
-	my_body_pos.z += my_body_vel.z * DT + my_body_acc.z * DT * DT / 2;
-	pos_dev[my_body_index] = my_body_pos;
-
-	// update and store my_body velocity
-	my_body_vel.x += my_body_acc.x * DT;
-	my_body_vel.y += my_body_acc.y * DT;
-	my_body_vel.z += my_body_acc.z * DT;
-	vel_dev[my_body_index] = my_body_vel;
+		// store myBody position and velocity
+		posArray_dev[blockIdx.x] = myBodyPos;
+		velArray_dev[blockIdx.x] = myBodyVel;
+	}
 }
