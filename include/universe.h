@@ -7,73 +7,37 @@ namespace nbody
 		/**
 		 * Universe constructor.
 		 */
-		Universe();
+		Universe(void);
 
 		/**
 		 * Universe destructor.
 		 */
-		virtual
-		~Universe();
+		virtual ~Universe(void);
 
 		/**
 		 * Adds a body to the universe.
-		 * @param pos   Body position array (form: [x, y, z]).
-		 * @param vel   Body Velocity array (form: [x, y, z]).
-		 * @param mass  Body Mass.
+		 * @param pos   Body position triple (on host).
+		 * @param vel   Body velocity triple (on host).
+		 * @param mass  Body mass.
 		 */
-		void
-		add(const float* pos, const float* vel, float mass);
-
-		/**
-		 * Removes a body from the universe.
-		 * @param bodyIdx  Body index.
-		 */
-		void
-		remove(unsigned int bodyIdx);
+		void add(const float* pos, const float* vel, float mass);
 
 		/**
 		 * Removes all bodies from the universe.
 		 */
-		void
-		reset();
+		void reset(void);
 
 		/**
 		 * Retrieves number of bodies in the universe.
 		 * @return  Number of bodies.
 		 */
-		size_t
-		size();
+		size_t size(void);
 
 		/**
 		 * Performs one universal time step.
 		 * @param dt  Time increment.
 		 */
-		void
-		step(float dt);
-
-		/**
-		 * Retrieves position of a body.
-		 * @param bodyIdx  Body index.
-		 * @return         Body position array (form: [x, y, z]).
-		 */
-		const float*
-		position(unsigned int bodyIdx);
-
-		/**
-		 * Retrieves velocity of a body.
-		 * @param bodyIdx  Body index.
-		 * @return         Body velocity array (form: [x, y, z]).
-		 */
-		const float*
-		velocity(unsigned int bodyIdx);
-
-		/**
-		 * Retrieves mass of a body.
-		 * @param bodyIdx  Body index.
-		 * @return         Body mass.
-		 */
-		float
-		mass(unsigned int bodyIdx);
+		void step(float dt);
 
 	private:
 		struct Data;
