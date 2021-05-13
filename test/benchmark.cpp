@@ -7,7 +7,7 @@
 #include "universe.h"
 
 // benchmark parameters
-constexpr size_t NUM_BODIES = 8192;
+constexpr size_t NUM_BODIES = 32768;
 constexpr unsigned int NUM_STEPS = 1000;
 constexpr float DT = 0.01f;
 

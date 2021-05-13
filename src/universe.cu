@@ -11,7 +11,7 @@ namespace nbody
 	{
 		float4* pos_dev;               // position-and-mass vector (on device)
 		float4* vel_dev;               // velocity vector (on device)
-		float4* acc_dev;               // acceration vector (on device)
+		float4* acc_dev;               // acceleration vector (on device)
 		size_t size = 0;               // vectors size
 		size_t capacity = BLOCK_SIZE;  // vectors capacity
 	};
@@ -34,7 +34,8 @@ namespace nbody
 		delete data;
 	}
 
-	void Universe::add(const float* pos, const float* vel, float mass)
+	void Universe::add(const float* pos, const float* vel,
+		float mass)
 	{
 		// double capacity if at limit
 		if (data->size == data->capacity) {
@@ -56,17 +57,17 @@ namespace nbody
 			// grow velocity vector to new capacity
 			float4* oldVel_dev = data->vel_dev;
 			float4* newVel_dev;
-			cudaCheckError(cudaMalloc(&newVel_dev, newMemSize));  // allocate new memory
-			cudaCheckError(cudaMemcpy(newVel_dev, oldVel_dev,     // copy from old memory
+			cudaCheckError(cudaMalloc(&newVel_dev, newMemSize));   // allocate new memory
+			cudaCheckError(cudaMemcpy(newVel_dev, oldVel_dev,      // copy from old memory
 				oldMemSize, cudaMemcpyDeviceToDevice));
-			cudaCheckError(cudaFree(oldVel_dev));                 // free old memory
+			cudaCheckError(cudaFree(oldVel_dev));                  // free old memory
 			data->vel_dev = newVel_dev;
 
-			// grow acceration vector to new capacity
+			// grow acceleration vector to new capacity
 			float4* oldAcc_dev = data->acc_dev;
 			float4* newAcc_dev;
-			cudaCheckError(cudaMalloc(&newAcc_dev, newMemSize));  // allocate new memory
-			cudaCheckError(cudaFree(oldAcc_dev));                 // free old memory
+			cudaCheckError(cudaMalloc(&newAcc_dev, newMemSize));   // allocate new memory
+			cudaCheckError(cudaFree(oldAcc_dev));                  // free old memory
 			data->acc_dev = newAcc_dev;
 		}
 
@@ -74,9 +75,9 @@ namespace nbody
 		// NOTE: store mass with position for faster read
 		float4 posToAdd = { pos[0], pos[1], pos[2], mass };
 		float4 velToAdd = { vel[0], vel[1], vel[2] };
-		cudaCheckError(cudaMemcpy(data->pos_dev + data->size,     // copy to memory
+		cudaCheckError(cudaMemcpy(data->pos_dev + data->size,      // copy to memory
 			&posToAdd, sizeof(float4), cudaMemcpyHostToDevice));
-		cudaCheckError(cudaMemcpy(data->vel_dev + data->size,     // copy to memory
+		cudaCheckError(cudaMemcpy(data->vel_dev + data->size,      // copy to memory
 			&velToAdd, sizeof(float4), cudaMemcpyHostToDevice));
 
 		// increment size
@@ -100,21 +101,17 @@ namespace nbody
 		unsigned int numBlocks;
 		unsigned int sharedMemSize;
 
-		// update accerations based on positions and masses
+		// update acceleration vector
 		numBlocks = (data->size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 		sharedMemSize = BLOCK_SIZE * sizeof(float4);
 		updateAcc<<<numBlocks, BLOCK_SIZE, sharedMemSize>>>(
 			data->pos_dev, data->acc_dev);
+		cudaDeviceSynchronize();                                 // wait for computation to finish
 
-		// wait for device to finish computation
-		cudaDeviceSynchronize();
-
-		// update positions and velocities based on new accerations
+		// update position and velocity vectors
 		numBlocks = data->size;
 		updatePosAndVel<<<numBlocks, 1>>>(data->pos_dev,
 			data->vel_dev, data->acc_dev, dt);
-
-		// wait for device to finish computation
-		cudaDeviceSynchronize();
+		cudaDeviceSynchronize();                                 // wait for computation to finish
 	}
 }
